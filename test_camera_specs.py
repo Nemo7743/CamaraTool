@@ -84,6 +84,68 @@ def test_camera_specs(camera_index=0):
     cap.release()
     print("\n測試結束")
 
+
+def test_low_res_performance(camera_index=0):
+    cap = cv2.VideoCapture(camera_index)
+    
+    # 1. 強制設定 YUY2
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+    
+    # 2. 嘗試關閉自動曝光 (為了測試極限 FPS，不一定每台相機都支援此指令)
+    # 0.25 是某些驅動的關閉值，或是 0，視相機而定，無效會被忽略
+    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) 
+    cap.set(cv2.CAP_PROP_EXPOSURE, -5) # 設定一個較短的曝光時間 (負值通常代表 2的冪次方分之一秒)
+
+    # 3. 專攻低解析度測試
+    # USB 攝影機常見的低解析度標準：QQVGA (160x120), QCIF (176x144), QVGA (320x240)
+    low_res_targets = [
+        (320, 240),
+        (176, 144),
+        (160, 120) 
+    ]
+
+    print(f"--- 開始低解析度極限測試 (YUYV) ---")
+    print("提示：請確保環境光線非常充足，以免因曝光時間過長導致掉幀\n")
+
+    for w, h in low_res_targets:
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+        
+        # 讀取實際生效值
+        real_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        real_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        
+        print(f"請求: {w}x{h} -> 實際硬體輸出: {real_w}x{real_h}")
+        
+        if real_w == 640 and w < 640:
+             print("  [悲報] 攝影機不支援此低解析度，強制回退到了 640x480。")
+             print("  這意味著不管你要多小的圖，USB 傳輸的都是 VGA 大小，FPS 無法提升。")
+             continue
+
+        # 測試 FPS
+        start = time.time()
+        count = 0
+        while True:
+            ret, _ = cap.read()
+            if not ret: break
+            count += 1
+            if count >= 100: # 測 100 幀
+                break
+        
+        duration = time.time() - start
+        fps = count / duration
+        print(f"  -> 實測 FPS: {fps:.2f}\n")
+
+    cap.release()
+
+
+
+
+#======== 使用函式 ========
+
 if __name__ == "__main__":
-    # 如果你有筆電內建鏡頭，外接 USB 攝影機通常是 index 1，否則試試 0
-    test_camera_specs(camera_index=0)
+    # 如果筆電內建鏡頭，外接 USB 攝影機通常是 index 1，否則試試 0
+    camera_index = 0
+
+    test_camera_specs(camera_index)
+    #test_low_res_performance(camera_index)
