@@ -8,7 +8,7 @@ SAVE_FOLDER = "dataset_train/tst01"
 # 2. 設定計數器紀錄檔的名稱
 COUNTER_FILE = "counter.txt"
 
-# 3. 攝影機編號
+# 3. 攝影機編號(在筆電運作時因為 0 代表筆電視訊鏡頭，所以這邊要修改成 1 和 2)
 CAM1_INDEX = 0
 CAM2_INDEX = 1
 
