@@ -83,11 +83,10 @@ def main():
         key = cv2.waitKey(1) & 0xFF
 
         if key == ord('q'):
+            print(f"[系統] 程式結束")
             break
         
         elif key == 32: # Space 鍵
-            # --- 修改重點開始 ---
-            
             # 第一顆鏡頭使用 current_idx (例如 0000)
             filename1 = os.path.join(SAVE_FOLDER, f"{current_idx:04d}.jpg")
             
@@ -100,10 +99,7 @@ def main():
 
             print(f"[儲存] 已儲存: {current_idx:04d}.jpg 與 {current_idx+1:04d}.jpg")
 
-            # 一次拍了兩張，所以計數器要 +2
             current_idx += 2
-            
-            # --- 修改重點結束 ---
             
             update_counter(SAVE_FOLDER, COUNTER_FILE, current_idx)
 
