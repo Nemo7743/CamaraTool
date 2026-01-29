@@ -14,6 +14,9 @@ import time
 # 模式選項: "performance" (高效能) 或 "power_save" (省電)
 CURRENT_MODE = "performance"
 
+# 運算裝置選項: "auto" (自動偵測), "cuda" (強制GPU), "cpu" (強制CPU)
+DEVICE_PREFERENCE = "auto"
+
 # 模型路徑 (請確認路徑正確)
 MODEL_PATH = r"C:\LT_Model\checkpoints\model_best_Nemo_7.pth"
 
@@ -38,8 +41,18 @@ else:
     WAIT_TIME = 1         # 最小延遲
     print(f"啟動模式: [高效能版] (FPS無限制, 全速運算)")
 
-# 檢查 CUDA 狀態
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# 檢查 CUDA 狀態與處理使用者裝置偏好
+if DEVICE_PREFERENCE == "cuda" and torch.cuda.is_available():
+    target_device = "cuda"
+elif DEVICE_PREFERENCE == "cpu":
+    target_device = "cpu"
+else:
+    # Auto 模式，或是選了 cuda 但沒硬體支援時的 fallback
+    if DEVICE_PREFERENCE == "cuda":
+        print("警告: 您選擇了 GPU 但系統未偵測到 CUDA，已自動切換回 CPU。")
+    target_device = "cuda" if torch.cuda.is_available() else "cpu"
+
+device = torch.device(target_device)
 print(f"PyTorch 版本: {torch.__version__}")
 print(f"運算裝置: {device}")
 
@@ -160,7 +173,8 @@ try:
         
         # 顯示 FPS 與 模式
         mode_str = "High Perf" if CURRENT_MODE == "performance" else "Power Save"
-        cv2.putText(frame, f"FPS: {int(fps)} | {mode_str}", (10, 80), 
+        device_str = "GPU" if device.type == "cuda" else "CPU"
+        cv2.putText(frame, f"FPS: {int(fps)} | {mode_str} | {device_str}", (10, 80), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
 
         cv2.imshow('Inference', frame)
