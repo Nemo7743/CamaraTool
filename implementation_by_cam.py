@@ -15,10 +15,10 @@ import time
 CURRENT_MODE = "performance"
 
 # 運算裝置選項: "auto" (自動偵測), "cuda" (強制GPU), "cpu" (強制CPU)
-DEVICE_PREFERENCE = "auto"
+DEVICE_PREFERENCE = "cpu"
 
 # 模型路徑 (請確認路徑正確)
-MODEL_PATH = r"C:\LT_Model\checkpoints\model_best_Nemo_7.pth"
+MODEL_PATH = r"C:\LT_Model\checkpoints\model_best_Nemo_8.pth"
 
 # =========================================================
 # 0. 環境與參數設定
