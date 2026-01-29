@@ -12,15 +12,15 @@ import time
 # 【使用者設定區】在此切換模式
 # =========================================================
 # 模式選項: "performance" (高效能) 或 "power_save" (省電)
-CURRENT_MODE = "power_save"
+CURRENT_MODE = "performance"
 
 # 模型路徑 (請確認路徑正確)
-MODEL_PATH = r"C:\Users\legoa\NCU\專題\專題內容\CamaraTool-main\Cam_Tool_Inferance\model_best_Nemo_5.pth"
+MODEL_PATH = r"C:\Users\legoa\NCU\專題\專題內容\CamaraTool-main\Cam_Tool_Inferance\model_best_Nemo_6.pth"
 
 # =========================================================
 # 0. 環境與參數設定
 # =========================================================
-cam_index = 0
+cam_index = 1
 
 # 防止 CPU 多執行緒搶佔資源
 os.environ["OMP_NUM_THREADS"] = "1"
