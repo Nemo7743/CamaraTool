@@ -20,7 +20,7 @@ cv2.setNumThreads(0)  # 0 表示由 OpenCV 自動決定最少執行緒，或設�
 # =========================================================
 # 1. 設定與模型載入s
 # =========================================================
-model_path = r"C:/LT_Model/model/model_best_td2_7.pth"
+model_path = r"C:/LT_Model/model/model_best_Nemo_7.pth"
 n_class = 3
 classes = ['Hand', 'SafeItem', 'Tool']
 
