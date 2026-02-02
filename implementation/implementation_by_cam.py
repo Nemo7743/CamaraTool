@@ -18,7 +18,7 @@ CURRENT_MODE = "performance"
 DEVICE_PREFERENCE = "cpu"
 
 # 模型路徑 (請確認路徑正確)
-MODEL_PATH = r"C:\LT_Model\checkpoints\model_best_Nemo_8.pth"
+MODEL_PATH = r"C:\LT_Model\checkpoints\3.0_project_gray.pth"
 
 # =========================================================
 # 0. 環境與參數設定
@@ -66,8 +66,11 @@ else:
 # =========================================================
 # 1. 模型載入
 # =========================================================
-n_class = 4
-classes = ['Block', 'Hand', 'SafeItem', 'Tool']
+#n_class = 4
+#classes = ['Block', 'Hand', 'SafeItem', 'Tool']
+
+n_class = 2
+classes = ['Hand', 'Hand']
 
 # 建立模型結構 (需與權重檔匹配)
 model = models.shufflenet_v2_x2_0(weights=None) # 注意這裡若報錯，請改回 x1_0

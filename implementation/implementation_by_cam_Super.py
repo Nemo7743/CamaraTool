@@ -90,6 +90,10 @@ else:
 # =========================================================
 n_class = 4
 classes = ['Block', 'Hand', 'SafeItem', 'Tool']
+
+#n_class = 2
+#classes = ['Hand', 'noHand']
+
 model = models.shufflenet_v2_x2_0(weights=None)
 in_features = model.fc.in_features
 model.fc = nn.Linear(in_features, n_class)
