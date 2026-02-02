@@ -6,11 +6,14 @@ import cv2
 import numpy as np
 import os
 import time
-
+import sys # 用於安全退出
 
 # =========================================================
 # 【使用者設定區】在此切換模式
 # =========================================================
+# 信心域值
+confidence = 0.80
+
 # 模式選項: "performance" (高效能) 或 "power_save" (省電)
 CURRENT_MODE = "performance"
 
@@ -66,11 +69,8 @@ else:
 # =========================================================
 # 1. 模型載入
 # =========================================================
-#n_class = 4
-#classes = ['Block', 'Hand', 'SafeItem', 'Tool']
-
 n_class = 2
-classes = ['Hand', 'Hand']
+classes = ['Hand', 'noHand']
 
 # 建立模型結構 (需與權重檔匹配)
 model = models.shufflenet_v2_x2_0(weights=None) # 注意這裡若報錯，請改回 x1_0
@@ -114,7 +114,12 @@ last_conf = 0.0
 last_color = (128, 128, 128)
 prev_time = time.time()
 
+# 用於平滑數字的變數
+smoothed_probs = np.zeros(n_class)
+alpha = 0.2  # 平滑係數 (0.1~0.3 之間，愈小愈平滑但反應愈慢)
+
 print("開始執行...")
+print("【提示】若偵測到 Hand > 90%，畫面將自動暫停。請按【空白鍵】繼續。")
 
 try:
     while True:
@@ -125,7 +130,6 @@ try:
         frame_count += 1
         
         # 決定是否執行推論 (跳幀機制)
-        # 如果是高效能模式，FRAME_SKIP 為 0，條件永遠成立
         should_infer = (frame_count % (FRAME_SKIP + 1) == 0)
 
         if should_infer:
@@ -133,14 +137,11 @@ try:
             frame_small = cv2.resize(frame, (128, 128))
             img = cv2.cvtColor(frame_small, cv2.COLOR_BGR2RGB)
             
-            # Normalize (Numpy 向量運算)
             img = img.astype(np.float32) / 255.0
             img = (img - mean) / std
             img = img.transpose((2, 0, 1)) # HWC -> CHW
             
-            # 轉 Tensor
             if device.type == 'cuda':
-                # 【優化】使用 pin_memory 和 non_blocking 加速 CPU->GPU 傳輸
                 input_tensor = torch.from_numpy(img).unsqueeze(0).pin_memory().to(device, non_blocking=True)
             else:
                 input_tensor = torch.from_numpy(img).unsqueeze(0).to(device)
@@ -149,17 +150,24 @@ try:
             with torch.no_grad():
                 output = model(input_tensor)
                 probs = F.softmax(output, dim=1)
-                conf, pred = torch.max(probs, 1)
                 
-                # 取得結果
-                pred_index = pred.item()
-                last_conf = conf.item()
-            
-            last_label = classes[pred_index] if last_conf > 0.5 else "Unknown"
-            last_color = (0, 255, 0) if last_conf > 0.6 else (0, 0, 255)
+                # 取得所有類別的信心指數 (轉為 numpy)
+                current_probs = probs.cpu().numpy()[0]
+                
+                # 平滑化處理：EMA 濾波器
+                if frame_count == 1:
+                    smoothed_probs = current_probs
+                else:
+                    smoothed_probs = alpha * current_probs + (1 - alpha) * smoothed_probs
+                
+                # 取得平滑後的最高者
+                pred_index = np.argmax(smoothed_probs)
+                last_conf = smoothed_probs[pred_index]
+                last_label = classes[pred_index] if last_conf > 0.5 else "Unknown"
+                last_color = (0, 255, 0) if last_conf > 0.6 else (0, 0, 255)
 
         # =========================================================
-        # 繪圖與顯示 (使用當前或上一次的結果)
+        # 繪圖與顯示
         # =========================================================
         
         # 顯示 FPS
@@ -167,22 +175,64 @@ try:
         fps = 1 / (curr_time - prev_time)
         prev_time = curr_time
         
-        cv2.rectangle(frame, (0, 0), (250, 90), (0, 0, 0), -1) # 背景黑框方便閱讀
+        # 動態調整黑框高度以容納所有類別
+        bg_height = 80 + (n_class * 25)
+        cv2.rectangle(frame, (0, 0), (280, bg_height), (0, 0, 0), -1) 
         
-        # 顯示標籤
-        text_label = f"{last_label}: {last_conf * 100:.1f}%"
-        cv2.putText(frame, text_label, (10, 40), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, last_color, 2)
+        # 1. 顯示主結果 (最高信心度)
+        text_label = f"Result: {last_label}"
+        cv2.putText(frame, text_label, (10, 35), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, last_color, 2)
         
-        # 顯示 FPS 與 模式
+        # 2. 顯示各類別詳細信心指數 (平滑後)
+        for i, class_name in enumerate(classes):
+            prob_text = f"- {class_name}: {smoothed_probs[i] * 100:.1f}%"
+            y_pos = 70 + (i * 25)
+            color = (255, 255, 255) if i == np.argmax(smoothed_probs) else (150, 150, 150)
+            cv2.putText(frame, prob_text, (15, y_pos), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 1)
+        
+        # 3. 顯示 FPS 與 模式
         mode_str = "High Perf" if CURRENT_MODE == "performance" else "Power Save"
         device_str = "GPU" if device.type == "cuda" else "CPU"
-        cv2.putText(frame, f"FPS: {int(fps)} | {mode_str} | {device_str}", (10, 80), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+        cv2.putText(frame, f"FPS: {int(fps)} | {mode_str} | {device_str}", (10, bg_height - 10), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
 
         cv2.imshow('Inference', frame)
 
-        # FPS 控制
+        # =========================================================
+        # 新增功能：若 Hand > 90% 則暫停
+        # =========================================================
+        if last_label == 'Hand' and last_conf > confidence:
+            # 在畫面上額外顯示暫停提示
+            pause_h = 30
+            cv2.putText(frame, f"PAUSED (Hand > {confidence*100}%)", (300, pause_h), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            cv2.putText(frame, "Press SPACE to resume", (300, pause_h + 30), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
+            # 重新刷新畫面以顯示提示文字
+            cv2.imshow('Inference', frame)
+            
+            print(f"偵測到 Hand ({last_conf*100:.1f}%)，暫停中... 請按空白鍵繼續")
+
+            # 進入暫停迴圈，等待空白鍵
+            while True:
+                # waitKey(0) 表示無限等待
+                key = cv2.waitKey(0) 
+                
+                if key == 32: # 32 是空白鍵 (Space) 的 ASCII 碼
+                    print("繼續執行...")
+                    # 恢復後稍微重置平滑值，避免一啟動因為舊的平均值太高馬上又暫停
+                    # (選擇性，若不重置則會保留高信心值，可能瞬間又停)
+                    smoothed_probs = np.zeros(n_class) 
+                    frame_count = 0 # 確保下一幀會立即推論
+                    break
+                elif key == ord('q'): # 允許在暫停狀態下直接按 q 離開
+                    cap.release()
+                    cv2.destroyAllWindows()
+                    sys.exit()
+
+        # 一般的按鍵偵測 (沒暫停時)
         if cv2.waitKey(WAIT_TIME) & 0xFF == ord('q'):
             break
 
