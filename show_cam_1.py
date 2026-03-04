@@ -96,8 +96,5 @@ def main(desired_format, cam_index):
 if __name__ == "__main__":
     cam_index = 0
 
-    #desired_format = 'MJPG'
-    #desired_format = 'YUYV'
-    #desired_format = 'UYVY'
-    desired_format = 'YUY2'
+    desired_format = 'UYVY'  #在此修改： 'MJPG', 'YUYV', 'UYVY', 'YUY2'
     main(desired_format, cam_index)

@@ -93,6 +93,6 @@ def main(desired_format, cam_index):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    desired_format = 'MJPG' #'MJPG', 'YUYV', 'UYVY', 'YUY2'
-    cam_index = 0
+    desired_format = 'NV12' #'mjpg', 'MJPG', 'YUYV', 'UYVY', 'YUY2'
+    cam_index = 1
     main(desired_format, cam_index)
