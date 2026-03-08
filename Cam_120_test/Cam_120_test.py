@@ -3,7 +3,7 @@ import time
 
 def check_camera_fps():
     # 打開預設視訊鏡頭 (0 代表第一部攝影機，若有外接鏡頭可嘗試 1, 2...)
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
 
     # 檢查鏡頭是否成功開啟
     if not cap.isOpened():
